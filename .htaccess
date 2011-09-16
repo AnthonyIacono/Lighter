@@ -1,0 +1,7 @@
+Options +FollowSymLinks
+
+ErrorDocument 404 /home/404/
+
+RewriteEngine On
+RewriteRule ^$ index.php [L]
+RewriteRule (.*) index.php [L]

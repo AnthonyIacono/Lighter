@@ -1,0 +1,1 @@
+<?php echo "And your number is $number"; ?>
