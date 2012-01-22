@@ -7,7 +7,7 @@ class Json {
     public static function Encode($input) {
         return json_encode($input);
     }
-    public static function Decode($input) {
-        return json_decode($input);
+    public static function Decode($input, $assoc=false) {
+        return json_decode($input, $assoc);
     }
 }

@@ -11,4 +11,7 @@ class Logic {
         $value = trim(strtolower((string)$value));
         return ($value != 'false' and $value != 'nil' and $value != 'null' and $value != '' and $value != 'undefined');
     }
+    public static function BoolToBit($value) {
+        return self::ToBool($value) ? 1 : 0;
+    }
 }

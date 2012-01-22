@@ -64,6 +64,7 @@ class Database {
         self::Query("COMMIT", $db_index);
     }
     public static function Query($query, $db_index = 0) {
+        $query .= preg_match('/;$/', $query) > 0 ? '' : ';';
         if($db_index >= count(self::$Databases)) {
             return false;
         }
@@ -81,13 +82,30 @@ class Database {
         }
     }
     public static function FetchAssoc($result) {
+        if($result === false) {
+            return false;
+        }
         return mysqli_fetch_assoc($result);
+    }
+    public static function FetchAll($result) {
+        $items = array();
+        while($row = self::FetchAssoc($result)) {
+            $items[] = $row;
+        }
+        return $items;
     }
     public static function LastError($db_index = 0) {
         if($db_index >= count(self::$Databases)) {
             return false;
         }
         return mysqli_error(self::$Databases[$db_index]['link']);
+    }
+    public static function EscapeArray($array, $db_index = 0) {
+        $output = array();
+        foreach($array as $key => $value) {
+            $output[$key] = self::RealEscapeString($value, $db_index);
+        }
+        return $output;
     }
     public static function Select($parameters = array(), $db_index = 0, &$error = null, &$query_output = null) {
         if($db_index >= count(self::$Databases)) {
@@ -277,12 +295,6 @@ class Database {
         }
         return $results;
     }
-    public static function DateTime($timestamp = false) {
-        if($timestamp === false or !is_numeric($timestamp)) {
-            $timestamp = time();
-        }
-        return date('Y-m-d H:i:s', $timestamp);
-    }
     public static function InsertId($db_index = 0) {
         if($db_index >= count(self::$Databases)) {
             return false;
@@ -291,5 +303,25 @@ class Database {
     }
     public static function NumRows($result) {
         return mysqli_num_rows($result);
+    }
+    public static function BuildQuery($format, $params, $db_index = 0) {
+        return preg_replace_callback('/{{(P|E|U)[0-9]+}}/', function($matches) use($params, $db_index) {
+            $index = (int)substr(substr($matches[0], 3), 0, -2);
+            $param = isset($params[$index]) ? $params[$index] : '';
+            if(!isset($matches[1]) || $matches[1] == 'P') {
+                return $param;
+            }
+
+            return $matches[1] == 'U'
+                ? NumLib::Unsigned($param)
+                : Database::RealEscapeString($param, $db_index);
+        }, $format);
+    }
+    public static function BuildAndQueryThenFetchAll($format, $params, $db_index = 0) {
+        return Database::FetchAll(Database::Query(Database::BuildQuery($format, $params, $db_index), $db_index));
+    }
+
+    public static function BuildAndQuery($format, $params, $db_index = 0) {
+        return Database::Query(Database::BuildQuery($format, $params, $db_index), $db_index);
     }
 }

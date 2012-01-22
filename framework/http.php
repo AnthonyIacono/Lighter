@@ -77,7 +77,12 @@ class Request {
         return $is_post and !(isset($post_data['is_delete']) && Logic::ToBool($post_data['is_delete']));
     }
     public static function IsDelete() {
-        $is_post = (strtolower($_SERVER['REQUEST_METHOD']) == 'post');
+        $method = strtolower($_SERVER['REQUEST_METHOD']);
+        if($method == 'delete') {
+            return true;
+        }
+
+        $is_post = $method == 'post';
         if(!$is_post) {
             return false;
         }
@@ -93,12 +98,32 @@ class Request {
     public static function IsGet() {
         return (strtolower($_SERVER['REQUEST_METHOD']) == 'get');
     }
-    public static function PostData() {
-        return $_POST;
+    public static function PostData($key = false) {
+        if (is_array($key)) {
+            $values = array();
+            foreach ($key as $k) {
+                $values[] = self::PostData($k);
+            }
+            return $values;
+        }
+
+        if($key === false) {
+            return $_POST;
+        }
+        
+        if(!isset($_POST[$key])) {
+            return false;
+        }
+
+        return $_POST[$key];
     }
     public static function Redirect($where) {
         header('Location: ' . $where);
         View::$Layout = '';
         View::Draw('');
+    }
+
+    public static function Header($k, $v, $replace = true) {
+        header("$k: $v", $replace);
     }
 }

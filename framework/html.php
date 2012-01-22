@@ -1,47 +1,79 @@
 <?php
 
 class Html {
-    private function __construct() {
-        // *** Do not touch me *** //
+    public function concat() {
+        $args = func_get_args();
+
+        return implode("\n", $args);
     }
-    public static function StartElement($tag, $props, $is_self_closing) {
-        if($is_self_closing) {
-		    $start = "<".$tag;
-		    foreach($props as $key=>$value) {
-			    $start .= " ".$key."='".$value."'";
-		    }
-            $start .= " />";
-            return $start;
-        }
-        else {
-            $start = "<".$tag;
-            foreach($props as $key=>$value) {
-                $start .= " ".$key."='".$value."'";
-            }
-            $start .= ">";
-            return $start;
-        }
+
+    public function element() {
+        $args = func_get_args();
+
+        $method = array_shift($args);
+
+        return $this->__call($method, $args);
     }
-    public static function Element($tag, $props, $content, $is_self_closing) {
-        if($is_self_closing) {
-            $start = self::StartElement($tag, $props, true);
-            return $start;
-        }
-        else {
-            $start = self::StartElement($tag, $props, false);
-            $end = "</".$tag.">";
-            return $start . $content . $end;
-        }
+
+    public function hyperlink($href, $text, $escape = true, $additional_attributes = array()) {
+        return $this->__call('a', array(
+            array_merge($additional_attributes, array(
+                'href' => $href
+            )),
+            $escape ? htmlspecialchars($text) : $text
+        ));
     }
-    public static function Hyperlink($destination, $content, $class='', $id='') {
-        $props = array();
-	    $props['href'] = $destination;
-	    if($class!='') {
-		    $props['class'] = $class;
-	    }
-        if($id!='') {
-		    $props['id'] = $id;
-	    }
-	    return self::Element('a', $props, $content, false);
+
+    public function unordered_list($items, $escape = true, $list_attributes = array(), $item_attributes = array()) {
+        $items_html = '';
+        foreach($items as $k => $item) {
+            $attributes = is_array($item_attributes)
+                ? $item_attributes
+                : $item_attributes($k);
+
+            $items_html .= $this->li($attributes, $escape ? htmlspecialchars($item) : $item);
+        }
+
+        $attributes = is_array($list_attributes)
+            ? $list_attributes
+            : $list_attributes();
+
+        return $this->ul($attributes, $items_html);
+    }
+
+    public function __call($method, $args) {
+        $method = strtolower($method); // the method is the element
+
+        if(count($args) == 0) {
+            return "<$method />";
+        }
+
+        if(is_string($args[0])) {
+            array_unshift($args, array());
+        }
+
+        $self_closing = !isset($args[1]); // if there is isn't two params, it's self closing
+
+        if(!$self_closing) { // since it's not self closing, capture the second param as the body
+            $body = isset($args[2]) && $args[2] // if there is a third param, and it's true, special chars the body
+                ? htmlspecialchars($args[1])
+                : $args[1];
+        }
+
+        $args = is_array($args[0]) // if the first param is an array, use it for attribute arguments. otherwise, use a blank array
+                ? $args[0]
+                : array();
+
+        // Turn these arguments into an attribute string
+        $attr = '';
+
+        foreach($args as $k => $v) {
+            $v = htmlspecialchars($v);
+            $attr .= " $k=\"$v\"";
+        }
+
+        return $self_closing
+                ? "<$method$attr />"
+                : "<$method$attr>\n$body\n</$method>";
     }
 }
